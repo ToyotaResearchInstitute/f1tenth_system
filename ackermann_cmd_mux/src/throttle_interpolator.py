@@ -39,6 +39,10 @@ class InterpolateThrottle:
         # Create topic subscribers and publishers
         self.rpm_output = rospy.Publisher(self.rpm_output_topic, Float64,queue_size=1)
         self.servo_output = rospy.Publisher(self.servo_output_topic, Float64,queue_size=1)
+
+        # Create throttle timeout
+        self.throttle_timeout = rospy.get_param('throttle_timeout', default=1.0)
+        self.last_throttle_time = rospy.Time.now()
         
         rospy.Subscriber(self.rpm_input_topic, Float64, self._process_throttle_command)
         rospy.Subscriber(self.servo_input_topic, Float64, self._process_servo_command)
@@ -62,13 +66,15 @@ class InterpolateThrottle:
         smoothed_rpm = self.last_rpm + clipped_delta
         self.last_rpm = smoothed_rpm         
         # print self.desired_rpm, smoothed_rpm
-        self.rpm_output.publish(Float64(smoothed_rpm))
+        if rospy.Time.now() - self.last_throttle_time < self.throttle_timeout:
+            self.rpm_output.publish(Float64(smoothed_rpm))
             
     def _process_throttle_command(self,msg):
         input_rpm = msg.data
         # Do some sanity clipping
         input_rpm = min(max(input_rpm, self.min_rpm), self.max_rpm)
         self.desired_rpm = input_rpm
+        self.last_throttle_time = rospy.Time.now()
 
     def _publish_servo_command(self, evt):
         desired_delta = self.desired_servo_position-self.last_servo
