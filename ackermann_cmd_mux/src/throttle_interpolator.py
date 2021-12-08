@@ -66,7 +66,7 @@ class InterpolateThrottle:
         smoothed_rpm = self.last_rpm + clipped_delta
         self.last_rpm = smoothed_rpm         
         # print self.desired_rpm, smoothed_rpm
-        if rospy.Time.now() - self.last_throttle_time < self.throttle_timeout:
+        if (rospy.Time.now() - self.last_throttle_time).to_sec() < self.throttle_timeout:
             self.rpm_output.publish(Float64(smoothed_rpm))
             
     def _process_throttle_command(self,msg):
